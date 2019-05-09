@@ -11,10 +11,18 @@ int main(int argc, char **argv) {
     unsigned edThreshold = 2;
     double jaccardThreshold = 0.85;
 
-    joiner.joinJaccard(argv[1], argv[2], jaccardThreshold, resultJaccard);
-    joiner.joinED(argv[1], argv[2], edThreshold, resultED);
+    cout << "yes\n";
 
-    cout << "empty :" << resultED.empty() << endl;
+//    joiner.joinJaccard(argv[1], argv[2], jaccardThreshold, resultJaccard);
+//    joiner.joinED(argv[1], argv[2], edThreshold, resultED);
+
+    cout << "empty :" << resultJaccard.empty() << endl;
+
+    for(auto i : resultJaccard) 
+        cout << i.id1 << " " << i.id2 << " " << i.s << endl;
+
+
+/*  cout << "empty :" << resultED.empty() << endl;
 
     for(auto i : resultED) 
     	cout << i.id1 << " " << i.id2 << " " << i.s << endl;
@@ -25,6 +33,6 @@ int main(int argc, char **argv) {
 
     for(auto i : resultED) 
         cout << i.id1 << " " << i.id2 << " " << i.s << endl;
-
+*/
     return 0;
 }

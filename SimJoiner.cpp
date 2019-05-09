@@ -22,8 +22,67 @@ unsigned long long HashValue(const char *str, int len) {
     return ans;
 }
 
+
+void SimJoiner::CreateJaccIdf(const char *filename, int id) {
+	ifstream fin(filename);
+	strSetVector[id].clear();
+	char str[STRSIZE]; string strString;
+	while(fin.getline(str, STRSIZE)) {
+		int last = 0, len = strlen(str); strString = str; 
+		set<string> *tmpVec = new set<string>();
+		for(int i = 0; i < len; ++i)
+            if(str[i] == ' ') {
+                if(last < i) 
+                    jaccardTrie.Insert(str + last, i - last), tmpVec -> insert(strString.substr(last, i - last));
+                last = i + 1;
+            }
+        if(last < len)
+        	jaccardTrie.Insert(str + last, len - last), tmpVec -> insert(strString.substr(last, len - last));
+        strSetVector[id].pb(tmpVec);
+	}
+	fin.close();
+}
+
+void SimJoiner::CreateJaccIndex(const char *filename1, const char *filename2, double threshold) {
+	// todo : jaccardTrie.clear();
+	CreateJaccIdf(filename1, 0);
+	CreateJaccIdf(filename2, 1);
+	for(int i = 0; i < strSetVector[1].size(); ++i) {
+		vector<pair<int, int> > countIdVector;
+		for(auto &str : *strSetVector[1][i])
+			countIdVector.pb(jaccardTrie.Search(str.c_str(), str.length()));
+		sort(countIdVector.begin(), countIdVector.end());
+		int preLen = (1 - threshold) * strSetVector[1][i] -> size() + 1;
+		for(int j = 0; j < preLen; ++j)
+			strIdVector[countIdVector[j].B].pb(i);
+	}	
+}
+
+double SimJoiner::ComputeJacc(set<string> *l1, set<string> *l2, double threshold) {
+    int cnt = 0;
+    for (auto& w : *l1) if(l2->find(w) != l2->end()) cnt++;
+    return ((double)cnt / (double)(l1->size() + l2->size() - cnt));
+}
+
 int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double threshold, vector<JaccardJoinResult> &result) {
     result.clear();
+    CreateJaccIndex(filename1, filename2, threshold);
+    for(int i = 0; i < strSetVector[0].size(); ++i) {
+    	vector<pair<int, int> > countIdVector;
+    	joinTimes++;
+		for(auto &str : *strSetVector[0][i])
+			countIdVector.pb(jaccardTrie.Search(str.c_str(), str.length()));
+		sort(countIdVector.begin(), countIdVector.end());
+		int preLen = (1 - threshold) * strSetVector[0][i] -> size() + 1;
+		for(int j = 0; j < preLen; ++j)
+			for(auto lineId : strIdVector[countIdVector[j].B]) if(isAppear[lineId] != joinTimes){
+				isAppear[lineId] = joinTimes;
+				double jacc = ComputeJacc(strSetVector[0][i], strSetVector[1][lineId], threshold);
+				if(jacc >= threshold)
+					result.pb(JaccardJoinResult(i, lineId, jacc));
+			}
+    }
+    sort(result.begin(), result.end());
     return SUCCESS;
 }
 
@@ -87,7 +146,6 @@ void SimJoiner::searchED(const char *querystr, int threshold, vector<pair<int, i
 	int len1, remain, len2, lenPrefix, delta, pos, ll, rr, leni; 
 	ull hashValue; int ed;
 	vector<int> *edMapVector;
-	//cout << "searchED querystr : " << querystr << endl;
 	for(int len = l; len <= r; ++len) {
 		if(edMap[len][0].empty()) continue;
 		len1 = len / (threshold + 1), remain = len - len1 * (threshold + 1);
@@ -99,16 +157,12 @@ void SimJoiner::searchED(const char *querystr, int threshold, vector<pair<int, i
 			ll = max(0, max(pos - i, pos + delta + i - threshold));
 			rr = min(querylen - leni, min(pos + i, pos + delta - i + threshold));
 			for(int j = ll; j <= rr; ++j) {
-				//cout << "find hash [" << j << "," << leni << "]" << endl;
 				hashValue = HashValue(querystr + j, leni);
 				edMapVector = edMap[len][i][hashValue];
-				if(edMapVector) for(auto& lineId : *edMapVector) {
-					//cout << "lineId : " << lineId << endl; 
-					if(isAppear[lineId] != joinTimes) {
-						isAppear[lineId] = joinTimes;
-						ed = ComputeEd(querystr, querylen, strVector[lineId].c_str(), strVector[lineId].length(), threshold);
-						if(ed <= threshold) result.pb(mp(lineId, ed));
-					}
+				if(edMapVector) for(auto& lineId : *edMapVector) if(isAppear[lineId] != joinTimes) {
+					isAppear[lineId] = joinTimes;
+					ed = ComputeEd(querystr, querylen, strVector[lineId].c_str(), strVector[lineId].length(), threshold);
+					if(ed <= threshold) result.pb(mp(lineId, ed));
 				}
 			}	
 		}	
@@ -133,7 +187,7 @@ int SimJoiner::joinED(const char *filename1, const char *filename2, unsigned thr
     	}
     }
     fin.close();
-    // todo : sort result with the same i
+    // done : sort result with the same i
     sort(result.begin(), result.end());
     return SUCCESS;
 }

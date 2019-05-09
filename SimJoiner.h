@@ -15,11 +15,23 @@
 #include <set>
 using namespace std;
 
+const int SUCCESS = 0;
+const int FAILURE = 1;
+const int STRSIZE = 260;
+const int LEN = 10;
+const int INF = (int)1e9;
+const int STRNUM = 1000000;
+#define pb push_back
+#define A first
+#define B second
+#define mp make_pair
+typedef unsigned long long ull;
 
 struct TrieNode{
 	TrieNode* child[128];
-	vector<int> indexVector;
-	TrieNode() {
+	int id, cnt;
+	
+	TrieNode(): id(0), cnt(0) {
 		for(int i = 0; i < 128; ++i)
 			child[i] = NULL;
 	}
@@ -28,27 +40,30 @@ struct TrieNode{
 struct Trie
 {
 	TrieNode* root;
+	int tot;
 	Trie() { 
 		root = new TrieNode(); 
+		tot = 0;
 	}
-	void Insert(const char* str, int len, int lineId) {
+
+	void Insert(const char* str, int len) {
 		TrieNode* nowNode = root;
 		for (int i = 0; i < len; ++i) {
 			if(nowNode -> child[(int)str[i]] == NULL) 
 				nowNode -> child[(int)str[i]] = new TrieNode();
 			nowNode = nowNode -> child[(int)str[i]];
 		}
-		if(nowNode -> indexVector.empty() || *(nowNode -> indexVector.end() - 1) != lineId)
-			nowNode -> indexVector.push_back(lineId);
+		if(!nowNode -> id) nowNode -> id = ++tot;
+		nowNode -> cnt++; 
 	}
-	vector<int>* Search(const char* str, int len) {
+	pair<int, int> Search(const char* str, int len) {
 		TrieNode* nowNode = root;
 		for(int i = 0; i < len; ++i) {
 			if(nowNode -> child[(int)str[i]] == NULL)
-				return NULL;
+				return mp(-1, -1);
 			nowNode = nowNode -> child[(int)str[i]];
 		}
-		return &(nowNode -> indexVector);
+		return mp(nowNode -> cnt, nowNode -> id);
 	}
 };
 
@@ -70,31 +85,26 @@ struct JoinResult {
 typedef JoinResult<unsigned, double> JaccardJoinResult;
 typedef JoinResult<unsigned, unsigned> EDJoinResult;
 
-const int SUCCESS = 0;
-const int FAILURE = 1;
-const int STRSIZE = 260;
-const int LEN = 10;
-const int INF = (int)1e9;
-#define pb push_back
-#define A first
-#define B second
-#define mp make_pair
-typedef unsigned long long ull;
-
 class SimJoiner {
 public:
     SimJoiner();
     ~SimJoiner();
 
     int joinTimes;
-// ed
 	int *isAppear;
+//jacc
+    Trie jaccardTrie;
+    vector<set<string>* > strSetVector[2];
+    vector<int> strIdVector[STRNUM];
+// ed
 	int dp[STRSIZE][STRSIZE];
 	vector<string> strVector;
 	vector<pair<string, int> > edShortVector;
 	unordered_map<ull, vector<int> *> edMap[STRSIZE][LEN];
     
-
+	double ComputeJacc(set<string> *l1, set<string> *l2, double threshold);
+	void CreateJaccIdf(const char *filename, int id);
+	void CreateJaccIndex(const char *filename1, const char *filename2, double threshold);
     int joinJaccard(const char *filename1, const char *filename2, double threshold, std::vector<JaccardJoinResult> &result);
     
 	int ComputeEd(const char* str1, int m, const char* str2, int n, int threshold);

@@ -8,6 +8,7 @@ SimJoiner::SimJoiner() {
 	memset(isAppear, 0, sizeof(isAppear[0]));
 	for(int i = 0; i < STRSIZE; ++i) dp[i][0] = i;
     for(int j = 0; j < STRSIZE; ++j) dp[0][j] = j;
+    strIdVector = new vector<int> [STRNUM];
 }
 
 SimJoiner::~SimJoiner() {

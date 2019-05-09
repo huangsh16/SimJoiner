@@ -95,7 +95,7 @@ public:
 //jacc
     Trie jaccardTrie;
     vector<set<string>* > strSetVector[2];
-    vector<int> strIdVector[STRNUM];
+    vector<int> *strIdVector;
 // ed
 	int dp[STRSIZE][STRSIZE];
 	vector<string> strVector;

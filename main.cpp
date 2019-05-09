@@ -3,17 +3,16 @@
 using namespace std;
 
 int main(int argc, char **argv) {
+    
     SimJoiner joiner;
-
     vector<EDJoinResult> resultED;
     vector<JaccardJoinResult> resultJaccard;
 
     unsigned edThreshold = 2;
-    double jaccardThreshold = 0.85;
+    double jaccardThreshold = 0.5;
 
-    cout << "yes\n";
 
-//    joiner.joinJaccard(argv[1], argv[2], jaccardThreshold, resultJaccard);
+    joiner.joinJaccard(argv[1], argv[2], jaccardThreshold, resultJaccard);
 //    joiner.joinED(argv[1], argv[2], edThreshold, resultED);
 
     cout << "empty :" << resultJaccard.empty() << endl;

@@ -27,46 +27,6 @@ const int STRNUM = 1000000;
 #define mp make_pair
 typedef unsigned long long ull;
 
-struct TrieNode{
-	TrieNode* child[128];
-	int id, cnt;
-	
-	TrieNode(): id(0), cnt(0) {
-		for(int i = 0; i < 128; ++i)
-			child[i] = NULL;
-	}
-};
-
-struct Trie
-{
-	TrieNode* root;
-	int tot;
-	Trie() { 
-		root = new TrieNode(); 
-		tot = 0;
-	}
-
-	void Insert(const char* str, int len) {
-		TrieNode* nowNode = root;
-		for (int i = 0; i < len; ++i) {
-			if(nowNode -> child[(int)str[i]] == NULL) 
-				nowNode -> child[(int)str[i]] = new TrieNode();
-			nowNode = nowNode -> child[(int)str[i]];
-		}
-		if(!nowNode -> id) nowNode -> id = ++tot;
-		nowNode -> cnt++; 
-	}
-	pair<int, int> Search(const char* str, int len) {
-		TrieNode* nowNode = root;
-		for(int i = 0; i < len; ++i) {
-			if(nowNode -> child[(int)str[i]] == NULL)
-				return mp(-1, -1);
-			nowNode = nowNode -> child[(int)str[i]];
-		}
-		return mp(nowNode -> cnt, nowNode -> id);
-	}
-};
-
 template <typename IDType, typename SimType>
 struct JoinResult {
     IDType id1;
@@ -92,17 +52,24 @@ public:
 
     int joinTimes;
 	int *isAppear;
+	int idNum;
 //jacc
-    Trie jaccardTrie;
-    vector<set<string>* > strSetVector[2];
+	unordered_map<ull, int> strHashToId;
+	int *idToCnt;
+    vector<vector<int> > idVectorVector[2];
+    vector<vector<pair<int, int>> > TmpVec;
     vector<int> *strIdVector;
+    int minlen[2];
+    int *isQuery;
 // ed
 	int dp[STRSIZE][STRSIZE];
 	vector<string> strVector;
 	vector<pair<string, int> > edShortVector;
 	unordered_map<ull, vector<int> *> edMap[STRSIZE][LEN];
     
-	double ComputeJacc(set<string> *l1, set<string> *l2, double threshold);
+    bool cmp(const int &x, const int &y);
+    int InsertHash(const char *str, int len);
+	double ComputeJacc(int lineid, int sz, double threshold);
 	void CreateJaccIdf(const char *filename, int id);
 	void CreateJaccIndex(const char *filename1, const char *filename2, double threshold);
     int joinJaccard(const char *filename1, const char *filename2, double threshold, std::vector<JaccardJoinResult> &result);

@@ -51,7 +51,7 @@ public:
     ~SimJoiner();
 
     int joinTimes;
-	int *isAppear;
+	int *isAppear, *appearTimes;
 	int idNum;
 //jacc
 	unordered_map<ull, int> strHashToId;

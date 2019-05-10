@@ -5,6 +5,7 @@ using namespace std;
 SimJoiner::SimJoiner() {
 	joinTimes = 0;
 	isAppear = new int[300000];
+	appearTimes = new int[300000];
 	isQuery = new int[38400000];
 	memset(isAppear, 0, sizeof(isAppear[0]));
 	for(int i = 0; i < STRSIZE; ++i) dp[i][0] = i;
@@ -19,6 +20,7 @@ SimJoiner::~SimJoiner() {
 
 #define Abs(_) ((_) > 0 ? (_) : -(_))
 #define Ok(a, b, threshold) ((a) > (b) ? ((b) >= (a) * threshold) : ((a) >= (b) * threshold))
+#define CountNeedTimes(a, b, threshold) (ceil(((a) + (b)) * (threshold) / (1 + (threshold))))
 
 unsigned long long HashValue(const char *str, int len) {
     unsigned long long ans = 0;
@@ -94,44 +96,90 @@ pair<int, int> Count(vector<pair<int, int> > &v1, int x, vector<pair<int, int> >
 	return mp(cnt, x + y + 2 - cnt);
 }
 
+int GetJaccardThreshold(double threshold, int queryNum, int lineNum)
+{
+    double t1 = threshold * queryNum;
+    double t2 = (queryNum + lineNum) * threshold / (1 + threshold);
+    return ceil(t1) > ceil(t2) ? ceil(t1) : ceil(t2);
+}
+
 int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double threshold, vector<JaccardJoinResult> &result) {
     result.clear();
     CreateJaccIndex(filename1, filename2, threshold);
+
+    for(int id = 0; id < 4; ++id) {
+    	cout << " strIdVector :" << id << endl;
+		for(auto lineId : strIdVector[id]) cout << lineId << " ";
+		cout << endl;
+    }
     for(int i = 0; i < idVectorVector[0].size(); ++i) {
+    	cout << "i :" << i << endl;
     	joinTimes++;
     	for(auto id : idVectorVector[0][i]) isQuery[id] = joinTimes;
-		int preLen = 1 + 1.0 / (1 + threshold) * idVectorVector[0][i].size() - threshold / (1 + threshold) * minlen[1];
+    	int needTimes = GetJaccardThreshold(threshold, idVectorVector[0][i].size(), minlen[1]);
+		int preLen = idVectorVector[0][i].size() + 1 - needTimes;
+
+		cout << "needTimes : " << needTimes << endl;
+		cout << "preLen :" << preLen << endl;
 
 		vector<pair<int, int> > tmpVec;
+		vector<int> shortVector, tmpVector, ansVector;
 		for(int j = 0; j < idVectorVector[0][i].size(); ++j)
 			tmpVec.pb(mp(idToCnt[idVectorVector[0][i][j]], idVectorVector[0][i][j]));
 		sort(tmpVec.begin(), tmpVec.end());
 		for(int j = 0; j < preLen; ++j) for(auto lineId : strIdVector[tmpVec[j].B]) {
 			if(isAppear[lineId] != joinTimes){
 				isAppear[lineId] = joinTimes;
-				if(!Ok(idVectorVector[0][i].size(), TmpVec[lineId].size(), threshold)) continue;
-/*
-				int px = 1 + 1.0 / (1 + threshold) * idVectorVector[0][i].size() - threshold / (1 + threshold) * idVectorVector[1][lineId].size();
-				int py = 1 + 1.0 / (1 + threshold) * idVectorVector[1][lineId].size() - threshold / (1 + threshold) * idVectorVector[0][i].size();
-				if(px && py) {
-					int x = px - 1, y = py - 1;
-					while(tmpVec[x] != TmpVec[lineId][y]) {
-						while(tmpVec[x] > TmpVec[lineId][y]) x--;
-						while(tmpVec[x] < TmpVec[lineId][y]) y--;
-					}
-					auto tt = Count(tmpVec, x, TmpVec[lineId], y);
-					int ubound = tt.A + min(tmpVec.size() - x - 1, TmpVec[lineId].size() - y - 1);
-					int lbound = tt.B + max(tmpVec.size() - x - 1, TmpVec[lineId].size() - y - 1);
-					if(ubound < threshold * lbound) continue;
-				}
-*/
-				double jacc = ComputeJacc(lineId, idVectorVector[0][i].size(), threshold);
-				if(jacc >= threshold)
-					result.pb(JaccardJoinResult(i, lineId, jacc));
+				shortVector.pb(lineId);
+				appearTimes[lineId] = 0;
 			}
+			appearTimes[lineId]++;
 		}
+		cout << " shortVector :" << endl;
+		for(auto lineId : shortVector) cout << lineId << " ";
+		cout << endl;
+
+		for(auto lineId : shortVector) {
+            if(!Ok(TmpVec[lineId].size(), tmpVec.size(), threshold))
+                continue;
+            int needTimesOfStr = CountNeedTimes(TmpVec[lineId].size(), tmpVec.size(), threshold);
+            int appearTimesCnt = appearTimes[lineId];
+            if(appearTimesCnt + needTimes - 1 < needTimesOfStr)
+                continue;
+            tmpVector.push_back(lineId);
+        }
+
+        cout << " tmpVector :" << endl;
+		for(auto lineId : tmpVector) cout << lineId << " ";
+		cout << endl;
+
+        for(auto lineId : tmpVector) {
+            int appearTimesCnt = appearTimes[lineId];
+            int needTimesOfStr = CountNeedTimes(TmpVec[lineId].size(), tmpVec.size(), threshold);
+            needTimesOfStr = max(needTimesOfStr, needTimes);
+            cout << "appearTimesCnt : " << appearTimesCnt << endl;
+            cout << "needTimesOfStr : " << needTimesOfStr << endl;
+            for(int j = preLen; j < tmpVec.size(); ++j) {
+                if(appearTimesCnt >= needTimesOfStr || appearTimesCnt + tmpVec.size() - j < needTimesOfStr)
+                    break;
+                if(binary_search(strIdVector[tmpVec[j].B].begin(), strIdVector[tmpVec[j].B].end(), lineId))
+                    appearTimesCnt++;
+            }
+            if(appearTimesCnt >= needTimesOfStr)
+                ansVector.push_back(lineId);
+        }
+
+        cout << " ansVector :" << endl;
+		for(auto lineId : ansVector) cout << lineId << " ";
+		cout << endl;
+
+        sort(ansVector.begin(), ansVector.end());
+        for(auto lineId : ansVector) {
+        	double jacc = ComputeJacc(lineId, idVectorVector[0][i].size(), threshold);
+			if(jacc >= threshold)
+				result.pb(JaccardJoinResult(i, lineId, jacc));
+        }
 	}
-    sort(result.begin(), result.end());
     return SUCCESS;
 }
 

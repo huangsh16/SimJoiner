@@ -62,7 +62,7 @@ public:
     int minlen[2];
     int *isQuery;
 // ed
-	int dp[STRSIZE][STRSIZE];
+	char dp[STRSIZE][STRSIZE];
 	vector<string> strVector;
 	vector<pair<string, int> > edShortVector;
 	unordered_map<ull, vector<int> *> edMap[STRSIZE][LEN];

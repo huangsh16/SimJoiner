@@ -18,6 +18,7 @@ SimJoiner::~SimJoiner() {
 }
 
 #define Abs(_) ((_) > 0 ? (_) : -(_))
+#define Ok(a, b, threshold) ((a) > (b) ? ((b) >= (a) * threshold) : ((a) >= (b) * threshold))
 
 unsigned long long HashValue(const char *str, int len) {
     unsigned long long ans = 0;
@@ -108,6 +109,7 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
 		for(int j = 0; j < preLen; ++j) for(auto lineId : strIdVector[tmpVec[j].B]) {
 			if(isAppear[lineId] != joinTimes){
 				isAppear[lineId] = joinTimes;
+				if(!Ok(idVectorVector[0][i].size(), TmpVec[lineId].size(), threshold)) continue;
 /*
 				int px = 1 + 1.0 / (1 + threshold) * idVectorVector[0][i].size() - threshold / (1 + threshold) * idVectorVector[1][lineId].size();
 				int py = 1 + 1.0 / (1 + threshold) * idVectorVector[1][lineId].size() - threshold / (1 + threshold) * idVectorVector[0][i].size();
@@ -140,14 +142,17 @@ int SimJoiner::ComputeEd(const char* str1, int m, const char* str2, int n, int t
     for(int i = 1; i <= m; i++) {
         int begin = max(i - threshold, 1);
         int end = min(i + threshold, n);
+        char minn = 100;
         if (begin > end)
             break;
         for (int j = begin; j <= end; j++) {
-            int t = !(str1[i - 1] == str2[j - 1]);
-            int d1 = Abs(i - 1 - j) > threshold ? INF : dp[i - 1][j];
-            int d2 = Abs(i - j + 1) > threshold ? INF : dp[i][j - 1];
+            bool t = !(str1[i - 1] == str2[j - 1]);
+            char d1 = Abs(i - 1 - j) > threshold ? 100 : dp[i - 1][j];
+            char d2 = Abs(i - j + 1) > threshold ? 100 : dp[i][j - 1];
             dp[i][j] = min(dp[i - 1][j - 1] + t, min(d1 + 1, d2 + 1));
+            minn = min(dp[i][j], minn);
         }
+        if(minn > threshold) return INF;
     }
     return dp[m][n];
 }
